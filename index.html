@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>特色产业在全国的分布情况</title>
+		<style type="text/css">
+			* {
+				margin: 0;
+				padding: 0;
+			}
+
+			html,
+			body {
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+			}
+
+			body {
+				background-size: cover;
+				color: #666;
+				font-size: 20px;
+			}
+
+			header {
+				height: 2em;
+				position: relative;
+				background-color: transparent;
+				z-index: 99;
+			}
+
+			header h1 {
+				color: #49b0ff;
+				text-align: center;
+				font-size: 2.5vw;
+				line-height: 9vh;
+			}
+
+			.weather {
+				position: absolute;
+				right: 1vw;
+				top: 0;
+				line-height: 9vh;
+			}
+
+			.content {
+				position: absolute;
+				top: 0;
+				height: 100%;
+				width: 100%;
+			}
+
+			.tab {
+				color: #dfd0d0;
+				position: absolute;
+				top: 108px;
+				background-color: black;
+				cursor: pointer;
+			}
+
+			.tab .item {
+				/* text-align: center; */
+				border-bottom: 1px solid #434443;
+				padding: 8px;
+			}
+
+			.tab .item.active {
+				color: aquamarine;
+			}
+
+			.tip {
+				position: absolute;
+				min-width: 300px;
+				max-width: 600px;
+				background-color: black;
+				color: #cdcdcd;
+				border-radius: 5px;
+				padding: 10px;
+				font-size: 18px;
+			}
+
+			.dia {
+				position: absolute;
+				width: 200px;
+				top: 0vh;
+				left: 150px;
+				background-color: black;
+				color: #cdcdcd;
+			}
+
+			.dia .item {
+				/* background-color: #6efa32; */
+				/* color: green; */
+				display: inline-block;
+				width: 30px;
+				height: 15px;
+				margin-right: 10px;
+				margin-left: 10px;
+			}
+
+			.dia .item.active+span {
+				color: #35fcff;
+			}
+
+			.dia .item.active {
+				color: #35fcff;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1>832个贫困县的产业脱贫路径</h1>
+		</header>
+		<div id="map" class="content"></div>
+		<div class="tab">
+			<div data-tag='0' class="item active">832县的全览</div>
+			<!-- <div data-tag='1' class="item">种植业</div>
+			<div data-tag='2' class="item">畜牧/养殖业</div>
+			<div data-tag='3' class="item">其他</div> -->
+			<!-- <div data-tag='4' class="item">按省划分</div> -->
+			<div data-tag='5' class="item">按时间段划分</div>
+			<div data-tag='6' class="item">按产业分类划分</div>
+
+		</div>
+		<script src="js/jquery.min.js" type="text/javascript" charset="utf-8"></script>
+		<script src="js/bootstrap.min.js" type="text/javascript" charset="utf-8"></script>
+		<script src="js/data.js" type="text/javascript" charset="utf-8"></script>
+		<script
+			src="https://webapi.amap.com/maps?v=1.4.15&key=e7812f35919131bcd2eac50faed4d188&plugin=Map3D,AMap.DistrictSearch,AMap.Autocomplete,AMap.PlaceSearch">
+		</script>
+		<script type="text/javascript">
+			$(function() {
+				var _cityData, _countryData, _classifi;
+				var markers = [];
+				var colors = ['rgba(0,0,255,1)', '#ACAAAF', '#4D6C80', '#EFEEE9'];
+				var _AMap = new AMap.Map('map', {
+					resizeEnable: true,
+					zoom: 5,
+					center: [104.703189, 38.39249]
+				});
+				$('.tab .item').on('click', function() {
+					$('.dia').remove();
+					$('.item').removeClass('active');
+					$(this).toggleClass('active');
+					var tagno = $(this).data('tag');
+					switch (tagno) {
+						case 0:
+						case 1:
+						case 2:
+						case 3:
+							loadcountry(_countryData, 5, ['#0000ff', '#0000ff', '#0000ff', '#0000ff']);
+							break;
+						case 5:
+							CreatTime();
+							loadcountry(_countryData.filter(a => a.time.substring(0, 4) < 2018), 5, ['#FDC10F',
+								'#F88B37', '#EF4823', '#C21F44'
+							])
+							break;
+						case 6:
+							CreatTip(area, typecolors);
+							_classifi.map(function(item, i) {
+								let data = _countryData.find(a => a.city == item.area)
+								if (data) {
+									item = Object.assign(item, data);
+								}
+							});
+							loadcountry(_classifi);
+							break;
+						default:
+							break;
+					}
+
+				});
+				_cityData = sourcedata.citydata;
+				_countryData = sourcedata.countrydata;
+				_classifi = sourcedata.classifi;
+				// changeTag(0);
+				loadcountry(_countryData, 5, ['#0000ff', '#0000ff', '#0000ff', '#0000ff']);
+
+				function changeTag(idx) {
+					if (_AMap) {
+						_AMap.remove(markers);
+					}
+					for (var i = 0; i < _cityData.length; i += 1) {
+						var sum = 0;
+						if (idx == '0') {
+							sum = _cityData[i]['znum'] + _cityData[i]['yznum'] + _cityData[i]['other'];
+						} else if (idx == '1') {
+							sum = _cityData[i]['znum']
+						} else if (idx == '2') {
+							sum = _cityData[i]['yznum']
+						} else if (idx == '3') {
+							sum = _cityData[i]['other']
+						}
+						if (sum) {
+							let marker = loadmarker({
+								name: _cityData[i].area,
+								value: sum
+							}, _cityData[i].pos, colors[idx], (10 + sum / 2));
+							marker.on('mouseover', function(e) {
+								$('.tip').remove();
+								var data = e.target.w.extData;
+								var setting = '<div class="tip">区&nbsp;域：' + data.name + '<br>数&nbsp;量：' + data
+									.value + '</div>';
+								$('body').append(setting);
+								$('.tip').css('left', e.originEvent.clientX + 'px');
+								$('.tip').css('top', e.originEvent.clientY + 'px');
+							});
+							marker.on('mouseout', function(e) {
+								$('.tip').remove();
+							});
+						}
+					}
+				}
+
+				function loadmarker(data, pos, color, radius) {
+					var circleMarker = new AMap.CircleMarker({
+						center: pos,
+						radius: radius, //3D视图下，CircleMarker半径不要超过64px
+						strokeColor: 'white',
+						strokeWeight: 2,
+						strokeOpacity: 1,
+						fillColor: color,
+						fillOpacity: 1,
+						zIndex: 10,
+						bubble: true,
+						cursor: 'pointer',
+						clickable: true,
+						extData: data
+					});
+					circleMarker.setMap(_AMap);
+					markers.push(circleMarker);
+					return circleMarker;
+				}
+
+				var area = ['茶产业', '水果产业', '其他种植业', '旅游业', '加工产业', '养殖或畜牧业', '其他产业'];
+				var typecolors = ['#202af2', '#0cc2f2', '#90e36f', '#ffe700', '#ff9e00', '#ff6700',
+					'#ff1800'
+				];
+				var size = [5, 3, 1];
+
+				function CreatTip(area, color) {
+					if ($('.dia').length) $('.dia').remove();
+					var itemsetting = "";
+					let idx = 0;
+					for (let i in area) {
+						idx++;
+						itemsetting += '<div class="item" style="background-color:' + color[i] + '"></div><span tag=' +
+							idx + '>' + area[
+								i] + '</span><br/>';
+					}
+					$('body').append(
+						'<div class="dia" style="top: 191px;"><div class="item" style="background-color:pink"></div><span tag=0>全览</span><br/>' +
+						itemsetting + '</div>');
+
+					$('.dia').find('span').on('click', function(e) {
+						$(e.target).closest('.item').addClass('active');
+						let tagno = parseInt($(e.target).attr('tag'));
+						$('.dia .item').removeClass('active');
+						$('.dia .item').eq(tagno).addClass('active');
+						switch (tagno) {
+							case 0:
+								loadcountry(_classifi);
+								break;
+							case 1:
+							case 2:
+							case 3:
+							case 4:
+							case 5:
+							case 6:
+							case 7:
+							case 8:
+								let source = _classifi.filter(a => a.type == area[tagno - 1]);
+								loadcountry(source, 5);
+								break;
+							default:
+								break;
+						}
+					})
+				}
+
+				function CreatTime() {
+					if ($('.dia').length) $('.dia').remove();
+					arr = ['2018', '2019', '2020', '2021'];
+					var itemsetting = "",
+						classs = "";
+					let idx = 0;
+					for (let i in arr) {
+						if (idx == 0) classs = 'active';
+						else classs = '';
+						itemsetting += '<div class="item ' + classs + '" tag=' + idx + '>' + arr[i] + '</div><br/>';
+						idx++;
+					}
+					$('body').append(
+						'<div class="dia" style="top: 151px;">' + itemsetting + '</div>');
+
+					$('.dia').find('.item').on('click', function(e) {
+						$('.dia .item').removeClass('active');
+						$(e.target).closest('.item').addClass('active');
+						let tagno = parseInt($(e.target).html());
+						let cor = ['#FDC10F', '#F88B37', '#EF4823', '#C21F44'];
+						switch (tagno) {
+							case 2018:
+								loadcountry(_countryData.filter(a => parseInt(a.time.substring(0, 4)) < tagno),
+									5, cor);
+								break;
+							case 2019:
+								loadcountry(_countryData.filter(a => parseInt(a.time.substring(0, 4)) < tagno),
+									5, cor);
+								break;
+							case 2020:
+								loadcountry(_countryData.filter(a => parseInt(a.time.substring(0, 4)) < tagno),
+									5, cor);
+								break;
+							case 2021:
+								loadcountry(_countryData.filter(a => parseInt(a.time.substring(0, 4)) < tagno),
+									5, cor);
+								break;
+							default:
+								break;
+						}
+					})
+				}
+
+				function loadcountry(data, sizenum = 0, color) {
+					let cor = ""
+					if (_AMap) {
+						_AMap.remove(markers);
+					}
+					for (var i = 0; i < data.length; i += 1) {
+						if (color && color.length) {
+							if (data[i].time.substring(0, 4) < 2018) {
+								cor = color[0];
+							} else if (data[i].time.substring(0, 4) < 2019) {
+								cor = color[1];
+							} else if (data[i].time.substring(0, 4) < 2020) {
+								cor = color[2];
+							} else if (data[i].time.substring(0, 4) < 2021) {
+								cor = color[3];
+							}
+						}
+						let _marker = loadmarker(data[i], data[i].pos, cor || typecolors[area.indexOf(data[i].type)],
+							sizenum ||
+							size[data[i].idx]);
+						_marker.on('mouseover', function(e) {
+							$('.tip').remove();
+							var data = e.target.w.extData;
+							let setting = "";
+							if (data.province) {
+								setting += '省&nbsp;&nbsp;份：' + data.province + '<br>';
+							}
+							if (data.city) {
+								setting += '&nbsp;&nbsp;&nbsp;县：' + data.city + '<br>';
+							}
+							if (data.area) {
+								setting += '区&nbsp;&nbsp;域：' + data.area + '<br>';
+							}
+							if (data.type) {
+								setting += '类&nbsp;&nbsp;别：' + data.type + '<br>';
+							}
+							if (data.time) {
+								setting += '脱贫时间：' + data.time + '<br>'
+							}
+							if (data.way) {
+								setting += '脱贫途径：' + data.way
+							}
+							$('body').append('<div class="tip">' + setting + '</div>');
+							var left = event.pageX,
+								top = event.pageY,
+								th = $('.tip').height(),
+								h = $(window).height(),
+								tw = $('.tip').width(),
+								w = $(window).width();
+							if ((top + th + 20) > h) {
+								top = top - th - 20;
+							} else {
+								top += 10;
+							}
+							if ((left + tw + 20) > w) {
+								left = left - tw - 30;
+							} else {
+								left += 10;
+							}
+							$('.tip').css({
+								top: top,
+								left: left
+							});
+							// $('.tip').css('left', e.originEvent.clientX + 'px');
+							// $('.tip').css('top', e.originEvent
+							// 	.clientY + 'px');
+						});
+						_marker.on('mouseout', function(e) {
+							$('.tip').remove();
+						});
+					}
+				}
+			});
+		</script>
+	</body>
+</html>
